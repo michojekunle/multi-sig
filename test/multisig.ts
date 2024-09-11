@@ -270,7 +270,7 @@ describe("Multisig", function () {
 
       const updateQuorumTx = await multisig.updateQuorum(2);
 
-      await multisig.connect(otherAccount).approveQuorumUpdateTx(1);      
+      await multisig.connect(otherAccount).approveTx(1);      
     })
 
     it("should revert approve update quorum transaction if a signer tries to sign twice", async function() {
@@ -281,9 +281,9 @@ describe("Multisig", function () {
 
       const updateQuorumTx = await multisig.updateQuorum(2);
 
-      await multisig.connect(otherAccount).approveQuorumUpdateTx(1);
+      await multisig.connect(otherAccount).approveTx(1);
 
-      expect(multisig.approveQuorumUpdateTx(1)).to.be.revertedWith("can't sign twice");      
+      expect(multisig.approveTx(1)).to.be.revertedWith("can't sign twice");      
     })
 
     it("should revert approve update quorum transaction for an invalid signer", async function() {
@@ -294,9 +294,9 @@ describe("Multisig", function () {
       
       const updateQuorumTx = await multisig.updateQuorum(2);
 
-      await multisig.connect(otherAccount).approveQuorumUpdateTx(1);
+      await multisig.connect(otherAccount).approveTx(1);
 
-      expect(multisig.connect(invalidAccount).approveQuorumUpdateTx(1));
+      expect(multisig.connect(invalidAccount).approveTx(1));
     })
 
     it("should revert approve update quorum transaction for an invalid txId", async function() {
@@ -307,9 +307,9 @@ describe("Multisig", function () {
       
       const updateQuorumTx = await multisig.updateQuorum(2);
 
-      await multisig.connect(otherAccount).approveQuorumUpdateTx(1);
+      await multisig.connect(otherAccount).approveTx(1);
 
-      expect(multisig.approveQuorumUpdateTx(0)).to.be.revertedWith("invalid tx id")
+      expect(multisig.approveTx(0)).to.be.revertedWith("invalid tx id")
     })
 
     it("should successfully complete update quorum transaction whe quorum is reached for update quorum transaction and update quorum", async function() {
@@ -320,8 +320,8 @@ describe("Multisig", function () {
 
       const updateQuorumTx = await multisig.updateQuorum(2);
 
-      await multisig.connect(otherAccount).approveQuorumUpdateTx(1);
-      await multisig.connect(anotherAccount).approveQuorumUpdateTx(1);
+      await multisig.connect(otherAccount).approveTx(1);
+      await multisig.connect(anotherAccount).approveTx(1);
       
       expect(await multisig.quorum()).to.be.equal(2);
     })

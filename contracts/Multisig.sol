@@ -7,6 +7,11 @@ contract Multisig {
     uint8 public noOfValidSigners;
     uint256 public txCount;
 
+    enum TransactionType {
+        Transfer, // value --1
+        UpdateQuorum // value --0
+    }
+
     struct Transaction {
         uint256 id;
         uint256 amount;
@@ -18,8 +23,13 @@ contract Multisig {
         uint256 noOfApproval;
         address tokenAddress;
         address[] transactionSigners;
+        TransactionType transactionType;
     }
 
+    // errors
+    error TransactionTypeNotFound();
+
+    // mapping
     mapping(address => bool) isValidSigner;
     mapping(uint => Transaction) transactions; // txId -> Transaction
     // signer -> transactionId -> bool (checking if an address has signed)
@@ -28,6 +38,7 @@ contract Multisig {
     // events
     event TransferTransactionCompleted();
     event UpdateQuorumTransactionCompleted();
+    event QuorumUpdated(uint);
 
     constructor(uint8 _quorum, address[] memory _validSigners) {
         require(_validSigners.length > 1, "few valid signers");
@@ -82,6 +93,7 @@ contract Multisig {
         trx.tokenAddress = _tokenAddress;
         trx.noOfApproval += 1;
         trx.transactionSigners.push(msg.sender);
+        trx.transactionType = TransactionType.Transfer;
         hasSigned[msg.sender][_txId] = true;
 
         txCount += 1;
@@ -92,10 +104,19 @@ contract Multisig {
 
         require(trx.id != 0, "invalid tx id");
 
-        require(
-            IERC20(trx.tokenAddress).balanceOf(address(this)) >= trx.amount,
-            "insufficient funds"
-        );
+        if (trx.transactionType == TransactionType.Transfer) {
+            require(
+                IERC20(trx.tokenAddress).balanceOf(address(this)) >= trx.amount,
+                "insufficient funds"
+            );
+        } else if (trx.transactionType == TransactionType.UpdateQuorum) {
+            require(trx.newQuorum > 1, "Invalid quorum");
+            require(
+                trx.newQuorum <= noOfValidSigners,
+                "quorum greater than valid signers"
+            );
+        }
+
         require(!trx.isCompleted, "transaction already completed");
         require(trx.noOfApproval < quorum, "approvals already reached");
 
@@ -114,16 +135,15 @@ contract Multisig {
 
         if (trx.noOfApproval == quorum) {
             trx.isCompleted = true;
-            if (trx.newQuorum > 1) {
-                require(trx.newQuorum > 1, "Invalid quorum");
-                require(
-                    trx.newQuorum <= noOfValidSigners,
-                    "quorum greater than valid signers"
-                );
+            if (trx.transactionType == TransactionType.Transfer) {
+                IERC20(trx.tokenAddress).transfer(trx.recipient, trx.amount);
+                emit TransferTransactionCompleted();
+            } else if (trx.transactionType == TransactionType.UpdateQuorum) {
                 quorum = trx.newQuorum;
+                emit QuorumUpdated(trx.newQuorum);
+            } else {
+                revert TransactionTypeNotFound();
             }
-            IERC20(trx.tokenAddress).transfer(trx.recipient, trx.amount);
-            emit TransferTransactionCompleted();
         }
     }
 
@@ -144,35 +164,10 @@ contract Multisig {
         trx.timestamp = block.timestamp;
         trx.newQuorum = _newQuorum;
         trx.noOfApproval += 1;
+        trx.transactionType = TransactionType.UpdateQuorum;
         trx.transactionSigners.push(msg.sender);
         hasSigned[msg.sender][_txId] = true;
 
         txCount += 1;
-    }
-
-    function approveQuorumUpdateTx(uint8 _txId) external {
-        Transaction storage trx = transactions[_txId];
-
-        require(trx.id != 0, "invalid tx id");
-
-        require(!trx.isCompleted, "transaction already completed");
-        require(trx.noOfApproval < quorum, "approvals already reached");
-
-        require(isValidSigner[msg.sender], "not a valid signer");
-        require(!hasSigned[msg.sender][_txId], "can't sign twice");
-
-        hasSigned[msg.sender][_txId] = true;
-        trx.noOfApproval += 1;
-        trx.transactionSigners.push(msg.sender);
-
-        if (trx.noOfApproval == quorum) {
-            trx.isCompleted = true;
-            require(trx.newQuorum > 1, "Invalid quorum");
-            require(
-                trx.newQuorum <= noOfValidSigners,
-                "quorum greater than valid signers"
-            );
-            quorum = trx.newQuorum;
-        }
     }
 }
