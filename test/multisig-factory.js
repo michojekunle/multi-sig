@@ -11,7 +11,8 @@ describe("MultisigFactory", function () {
     let addr3;
     let addr4;
 
-    beforeEach(async function () {
+    // this will deploy the contract once and this deployment will be used throught the state
+    before(async function () {
         [owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
 
         Multisig = await ethers.getContractFactory("Multisig");
@@ -49,6 +50,6 @@ describe("MultisigFactory", function () {
 
         // Check the number of deployed Multisig contracts
         const multisigs = await multisigFactory.getMultisigs();
-        expect(multisigs.length).to.equal(3);
+        expect(multisigs.length).to.equal(4);
     });
 });
