@@ -8,8 +8,8 @@ contract Multisig {
     uint256 public txCount;
 
     enum TransactionType {
-        Transfer, // value --1
-        UpdateQuorum // value --0
+        Transfer, // value --0
+        UpdateQuorum // value --1
     }
 
     struct Transaction {
